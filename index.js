@@ -17,6 +17,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions))
 app.use(express.json())
+app.use(cookieParser())
 
 
 
@@ -39,26 +40,58 @@ async function run() {
 
     // jwt generate
     app.post('/jwt', async(req, res)=>{
-      const user = req.body
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+      const email = req.body
+      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
         expiresIn: '365d'
       })
       res
       .cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'node' : 'strict'
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
       })
       .send({success: true})
     })
 
+    // clear token on logout 
+    app.get('/logout', (req, res)=>{
+      res
+      .clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'node' : 'strict',
+        maxAge: 0
+      })
+      .send({success: true})
+    })
+
+    // verify jwt middleware
+    const verifyToken = (req, res, next)=>{
+      const token = req.cookies?.token
+      if(!token) return res.status(401).send({message: 'unauthorized access'})
+      if(token){
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+          if(err){
+            console.log(err);
+            return res.status(401).send({message: 'unauthorized access'})
+          }
+          console.log(decoded);
+          req.user = decoded
+          next()
+        })
+      }
+    }
+
+
+
+    // all foods
     app.get('/foods', async(req, res)=>{
         const result = await foodsCollection.find().toArray()
         res.send(result)
     })
 
     // add a food / post to collection
-    app.post('/addFood', async(req, res)=>{
+    app.post('/addFood', verifyToken, async(req, res)=>{
       const food = req.body
       const result = await foodsCollection.insertOne(food)
       res.send(result)
@@ -73,6 +106,7 @@ async function run() {
         res.send(result)
     })
 
+    // featured food section api
     app.get('/featured', async(req, res)=>{
         const result = await foodsCollection.find().sort({ foodQuantity: -1 }).limit(6).toArray();
 
@@ -80,7 +114,7 @@ async function run() {
     })
 
     // my req food
-    app.put('/reqFood/:id', async(req, res)=>{
+    app.put('/reqFood/:id', verifyToken, async(req, res)=>{
       const id = req.params.id
       const requestedFood = req.body;
       const query = {_id: new ObjectId(id)}
@@ -95,11 +129,14 @@ async function run() {
         console.log(result);
     })
 
-    app.get('/myFoodReq/:email', async(req, res)=>{
+    app.get('/myFoodReq/:email', verifyToken, async(req, res)=>{
+      const tokenEmail = req.user.email
       const email = req.params.email;
+      if(tokenEmail !== email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
       const query = { requester: email }
       const result = await foodsCollection.find(query).toArray()
-      console.log(result);
       res.send(result)
     })
 
