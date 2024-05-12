@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config()
+require('dotenv').config();
+const jwt = require('jsonwebtoken')
+const cookieParser = require('cookie-parser')
 const port = process.env.PORT || 5000;
 const app = express()
 
@@ -34,7 +36,21 @@ async function run() {
   try {
 
     const foodsCollection = client.db('foodBridge').collection('foods')
-    const reqCollection = client.db('foodBridge').collection('requestedFood')
+
+    // jwt generate
+    app.post('/jwt', async(req, res)=>{
+      const user = req.body
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '365d'
+      })
+      res
+      .cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'node' : 'strict'
+      })
+      .send({success: true})
+    })
 
     app.get('/foods', async(req, res)=>{
         const result = await foodsCollection.find().toArray()
