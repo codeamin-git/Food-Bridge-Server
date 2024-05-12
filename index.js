@@ -79,6 +79,14 @@ async function run() {
         console.log(result);
     })
 
+    app.get('/myFoodReq/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = { requester: email }
+      const result = await foodsCollection.find(query).toArray()
+      console.log(result);
+      res.send(result)
+    })
+
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
