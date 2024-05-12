@@ -34,6 +34,7 @@ async function run() {
   try {
 
     const foodsCollection = client.db('foodBridge').collection('foods')
+    const reqCollection = client.db('foodBridge').collection('requestedFood')
 
     app.get('/foods', async(req, res)=>{
         const result = await foodsCollection.find().toArray()
@@ -62,6 +63,21 @@ async function run() {
         res.send(result)
     })
 
+    // my req food
+    app.put('/reqFood/:id', async(req, res)=>{
+      const id = req.params.id
+      const requestedFood = req.body;
+      const query = {_id: new ObjectId(id)}
+      const options = {upsert: true}
+      const updateFood = {
+        $set:{
+          ...requestedFood
+        }
+      }
+        const result = await foodsCollection.updateOne(query, updateFood, options);
+        res.send(result)
+        console.log(result);
+    })
 
 
     // Connect the client to the server	(optional starting in v4.7)
