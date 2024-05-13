@@ -102,6 +102,20 @@ async function run() {
       const result = await foodsCollection.insertOne(food)
       res.send(result)
     })
+
+    app.put('/update/:id', async(req, res)=>{
+      const id = req.params.id
+      const updatedInfo = req.body;
+      const query = {_id: new ObjectId(id)}
+      const options = {upsert: true}
+      const updatedFood = {
+        $set:{
+          ...updatedInfo
+        }
+      }
+        const result = await foodsCollection.updateOne(query, updatedFood, options);
+        res.send(result)
+   })
     
     // manage my foods page api
     app.get('/manageMyFoods/:email', verifyToken, async(req, res)=>{
@@ -144,7 +158,6 @@ async function run() {
       }
         const result = await foodsCollection.updateOne(query, updateFood, options);
         res.send(result)
-        console.log(result);
     })
 
     app.get('/myFoodReq/:email', verifyToken, async(req, res)=>{
