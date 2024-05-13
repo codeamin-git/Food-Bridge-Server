@@ -90,8 +90,14 @@ async function run() {
         res.send(result)
     })
 
+    app.get('/availableFoods', async(req, res)=>{
+      const status = {foodStatus: 'available'}
+      const result = await foodsCollection.find(status).toArray()
+      res.send(result)
+    })
+
     // add a food / post to collection
-    app.post('/addFood', verifyToken, async(req, res)=>{
+    app.post('/addFood', async(req, res)=>{
       const food = req.body
       const result = await foodsCollection.insertOne(food)
       res.send(result)
