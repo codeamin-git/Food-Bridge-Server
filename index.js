@@ -103,6 +103,18 @@ async function run() {
       res.send(result)
     })
     
+    // manage my foods page api
+    app.get('/manageMyFoods/:email', verifyToken, async(req, res)=>{
+      const tokenEmail = req.user.email
+      const email = req.params.email;
+      if(tokenEmail !== email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
+      const query = { donatorEmail: email }
+      const result = await foodsCollection.find(query).toArray()
+      res.send(result)
+    })
+    
     // single food details
     app.get('/food/:id', async(req, res)=>{
         const id = req.params.id
