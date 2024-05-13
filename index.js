@@ -116,6 +116,13 @@ async function run() {
         const result = await foodsCollection.updateOne(query, updatedFood, options);
         res.send(result)
    })
+
+   app.delete('/food/:id', async(req, res)=>{
+    const id = req.params.id
+    const query = {_id: new ObjectId(id)}
+    const result = await foodsCollection.deleteOne(query)
+    res.send(result)
+   })
     
     // manage my foods page api
     app.get('/manageMyFoods/:email', verifyToken, async(req, res)=>{
