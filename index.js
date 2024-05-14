@@ -10,6 +10,7 @@ const corsOptions = {
     origin: [
         'http://localhost:5173',
     'http://localhost:5174',
+    'https://food-bridge-59aa8.web.app',
     ],
     credentials: true,
     optionSuccessStatus: 200,
@@ -54,15 +55,15 @@ async function run() {
     })
 
     // clear token on logout 
-    app.get('/logout', (req, res)=>{
+    app.get('/logout', (req, res) => {
       res
-      .clearCookie('token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'node' : 'strict',
-        maxAge: 0
-      })
-      .send({success: true})
+        .clearCookie('token', {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+          maxAge: 0,
+        })
+        .send({ success: true })
     })
 
     // verify jwt middleware
@@ -75,7 +76,6 @@ async function run() {
             console.log(err);
             return res.status(401).send({message: 'unauthorized access'})
           }
-          console.log(decoded);
           req.user = decoded
           next()
         })
@@ -97,22 +97,23 @@ async function run() {
     })
 
     // add a food / post to collection
-    app.post('/addFood', async(req, res)=>{
+    app.post('/addFood', verifyToken, async(req, res)=>{
       const food = req.body
       const result = await foodsCollection.insertOne(food)
       res.send(result)
     })
 
     app.put('/update/:id', async(req, res)=>{
-      const id = req.params.id
-      const updatedInfo = req.body;
-      const query = {_id: new ObjectId(id)}
-      const options = {upsert: true}
-      const updatedFood = {
-        $set:{
-          ...updatedInfo
-        }
-      }
+      const id = req.params.id;
+    const updatedInfo = req.body;
+    const query = { _id: new ObjectId(id) };
+    const options = { upsert: true };
+
+    delete updatedInfo._id;
+    
+    const updatedFood = {
+        $set: updatedInfo
+    };
         const result = await foodsCollection.updateOne(query, updatedFood, options);
         res.send(result)
    })
@@ -125,7 +126,7 @@ async function run() {
    })
     
     // manage my foods page api
-    app.get('/manageMyFoods/:email', verifyToken, async(req, res)=>{
+    app.get('/manageMyFoods/:email',verifyToken, async(req, res)=>{
       const tokenEmail = req.user.email
       const email = req.params.email;
       if(tokenEmail !== email){
@@ -137,7 +138,7 @@ async function run() {
     })
     
     // single food details
-    app.get('/food/:id', async(req, res)=>{
+    app.get('/food/:id', verifyToken, async(req, res)=>{
         const id = req.params.id
         const query = {_id: new ObjectId(id)}
         const result = await foodsCollection.findOne(query)
