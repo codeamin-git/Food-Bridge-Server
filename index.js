@@ -21,50 +21,10 @@ app.use(express.json())
 app.use(cookieParser())
 
 
-
-const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zyujvjv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
-
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
-const client = new MongoClient(uri, {
-  serverApi: {
-    version: ServerApiVersion.v1,
-    strict: true,
-    deprecationErrors: true,
-  }
-});
-
-async function run() {
-  try {
-
-    const foodsCollection = client.db('foodBridge').collection('foods')
-
-    // jwt generate
-    app.post('/jwt', async(req, res)=>{
-      const email = req.body
-      const token = jwt.sign(email, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: '365d'
-      })
-      res
-      .cookie('token', token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict'
-      })
-      .send({success: true})
-    })
-
-    // clear token on logout 
-    app.get('/logout', (req, res) => {
-      res
-        .clearCookie('token', {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
-          maxAge: 0,
-        })
-        .send({ success: true })
-    })
+const logger = async(req, res, next) => {
+  console.log('called:', req.host, req.originalUrl);
+  next()
+}
 
     // verify jwt middleware
     const verifyToken = (req, res, next)=>{
@@ -81,6 +41,52 @@ async function run() {
         })
       }
     }
+
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zyujvjv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+
+// Create a MongoClient with a MongoClientOptions object to set the Stable API version
+const client = new MongoClient(uri, {
+  serverApi: {
+    version: ServerApiVersion.v1,
+    strict: true,
+    deprecationErrors: true,
+  }
+});
+
+const cookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+};
+
+
+async function run() {
+  try {
+
+    const foodsCollection = client.db('foodBridge').collection('foods')
+
+    //creating Token
+app.post("/jwt", logger, async (req, res) => {
+  const user = req.body;
+  console.log("user for token", user);
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+
+  res.cookie("token", token, cookieOptions).send({ success: true });
+});
+
+//clearing Token
+app.post('/logout', async (req, res) => {
+  const user = req.body;
+  console.log('logging out', user);
+  res
+  .clearCookie('token', {
+          maxAge: 0, sameSite: 'none', secure: true
+        })
+  .send({ success: true })
+  })
+
+
 
 
 
